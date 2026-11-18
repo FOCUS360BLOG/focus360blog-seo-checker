@@ -3,6 +3,14 @@ from urllib.parse import urlparse, urljoin
 import requests, re, ipaddress, socket, json, time, os
 from bs4 import BeautifulSoup
 from collections import Counter
+from io import BytesIO
+from xml.sax.saxutils import escape
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
 
 app = Flask(__name__)
 UA = "Focus360BlogSEOAudit/1.0 (+public-page SEO diagnostics)"
@@ -170,6 +178,63 @@ def audit_url(raw):
     return {"url":url,"finalUrl":final_url,"score":score,"label":"Technical/on-page diagnostic score (not Google's ranking score)","checks":checks,
             "summary":{"pass":sum(c["status"]=="pass" for c in checks),"warning":sum(c["status"]=="warning" for c in checks),"fail":sum(c["status"]=="fail" for c in checks)},
             "details":{"title":title,"titleLength":len(title),"description":description,"descriptionLength":len(description),"canonical":canonical,"h1":h1,"h2":h2,"h3":h3,"images":len(imgs),"missingAlt":len(missing_alt),"internalLinks":len(internal),"externalLinks":len(external),"schemaTypes":sorted(set(schema_types)),"wordCount":word_count,"robotsTxt":robots_url,"sitemap":sitemap_found}}
+
+@app.route("/api/report",methods=["POST","OPTIONS"])
+def api_report():
+    """Create a branded PDF from the completed audit JSON sent by the page."""
+    if request.method == "OPTIONS":
+        return make_response("",204)
+    data=request.get_json(silent=True) or {}
+    try:
+        checks=data.get("checks") or []
+        summary=data.get("summary") or {}
+        if not isinstance(checks,list) or not checks or not isinstance(summary,dict):
+            return jsonify({"error":"A completed SEO audit is required before creating the PDF."}),400
+        score=int(data.get("score",0))
+        if score < 0 or score > 100:
+            return jsonify({"error":"Invalid audit score."}),400
+        safe=lambda value: escape(str(value if value is not None else ""))
+        buffer=BytesIO()
+        navy=colors.HexColor("#172B4D"); blue=colors.HexColor("#1677D2")
+        pale=colors.HexColor("#EEF5FC"); grid=colors.HexColor("#D9E1EA")
+        styles=getSampleStyleSheet()
+        styles.add(ParagraphStyle(name="F360Brand",parent=styles["Title"],fontName="Helvetica-Bold",fontSize=23,leading=27,textColor=navy,alignment=TA_CENTER,spaceAfter=2))
+        styles.add(ParagraphStyle(name="F360Sub",parent=styles["Normal"],fontSize=9,textColor=colors.HexColor("#5B6573"),alignment=TA_CENTER,spaceAfter=14))
+        styles.add(ParagraphStyle(name="F360Section",parent=styles["Heading2"],fontSize=13,leading=16,textColor=navy,spaceBefore=12,spaceAfter=7))
+        styles.add(ParagraphStyle(name="F360Cell",parent=styles["BodyText"],fontSize=8,leading=11,textColor=navy))
+        styles.add(ParagraphStyle(name="F360Small",parent=styles["BodyText"],fontSize=8,leading=11,textColor=colors.HexColor("#5B6573")))
+        story=[Spacer(1,5*mm),Paragraph("Focus360Blog",styles["F360Brand"]),Paragraph("SEO AUDIT REPORT",styles["F360Sub"])]
+        meta=[[Paragraph("<b>Website audited</b>",styles["F360Cell"]),Paragraph(safe(data.get("finalUrl") or data.get("url")),styles["F360Cell"])],
+              [Paragraph("<b>Requested URL</b>",styles["F360Cell"]),Paragraph(safe(data.get("url")),styles["F360Cell"])],
+              [Paragraph("<b>Audit date (UTC)</b>",styles["F360Cell"]),Paragraph(__import__("datetime").datetime.utcnow().strftime("%d %B %Y, %H:%M"),styles["F360Cell"])]]
+        mt=Table(meta,colWidths=[38*mm,134*mm]); mt.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),pale),("BOX",(0,0),(-1,-1),.6,grid),("INNERGRID",(0,0),(-1,-1),.4,grid),("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),8),("RIGHTPADDING",(0,0),(-1,-1),8),("TOPPADDING",(0,0),(-1,-1),7),("BOTTOMPADDING",(0,0),(-1,-1),7)])); story += [mt,Paragraph("Overall SEO diagnostic score",styles["F360Section"])]
+        label=safe(data.get("label") or "Technical/on-page diagnostic score; not Google's ranking score")
+        scorebox=Table([[Paragraph(f"<font size='28' color='#0F766E'><b>{score}/100</b></font><br/>{label}",styles["F360Cell"]) ,
+                         Paragraph(f"<b>{int(summary.get('pass',0))}</b> Passed<br/><b>{int(summary.get('warning',0))}</b> Warnings<br/><b>{int(summary.get('fail',0))}</b> Failed",styles["F360Cell"]) ]],colWidths=[100*mm,72*mm])
+        scorebox.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),pale),("BOX",(0,0),(-1,-1),.6,grid),("VALIGN",(0,0),(-1,-1),"MIDDLE"),("LEFTPADDING",(0,0),(-1,-1),10),("TOPPADDING",(0,0),(-1,-1),10),("BOTTOMPADDING",(0,0),(-1,-1),10)])); story.append(scorebox)
+        story.append(Paragraph("SEO checks and recommendations",styles["F360Section"]))
+        rows=[[Paragraph("<b>Status</b>",styles["F360Cell"]),Paragraph("<b>Check</b>",styles["F360Cell"]),Paragraph("<b>Finding and recommendation</b>",styles["F360Cell"])]]
+        for c in checks:
+            status=str(c.get("status","warning")).lower()
+            color={"pass":"#087443","warning":"#A16207","fail":"#B91C1C"}.get(status,"#475569")
+            finding=safe(c.get("detail"))
+            recommendation=safe(c.get("recommendation"))
+            if recommendation: finding += "<br/><font color='#5B6573'><b>Recommendation:</b> "+recommendation+"</font>"
+            rows.append([Paragraph(f"<font color='{color}'><b>{safe(status.upper())}</b></font>",styles["F360Cell"]),Paragraph("<b>"+safe(c.get("name"))+"</b><br/><font color='#64748B'>"+safe(c.get("category"))+"</font>",styles["F360Cell"]),Paragraph(finding,styles["F360Cell"])])
+        table=Table(rows,colWidths=[22*mm,43*mm,107*mm],repeatRows=1,splitByRow=1)
+        table.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),pale),("BOX",(0,0),(-1,-1),.6,grid),("INNERGRID",(0,0),(-1,-1),.35,grid),("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),6),("RIGHTPADDING",(0,0),(-1,-1),6),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)])); story.append(table)
+        story += [Paragraph("Important notes",styles["F360Section"]),Paragraph("This automated technical/on-page diagnostic is based on the HTML returned by the website. JavaScript-rendered content may not be included. The score is not Google's ranking score and does not guarantee rankings, indexing or traffic. Sitemap availability does not confirm submission or processing in Google Search Console.",styles["F360Small"]),Spacer(1,8*mm),Paragraph("Prepared by Focus360Blog SEO Checker",ParagraphStyle(name="F360FooterBrand",parent=styles["F360Small"],alignment=TA_CENTER,textColor=blue))]
+        def footer(canvas,doc):
+            canvas.saveState(); w,h=A4; canvas.setStrokeColor(grid); canvas.line(18*mm,12*mm,w-18*mm,12*mm); canvas.setFont("Helvetica",8); canvas.setFillColor(colors.HexColor("#5B6573")); canvas.drawString(18*mm,7*mm,"Focus360Blog | SEO Audit"); canvas.drawRightString(w-18*mm,7*mm,f"Page {doc.page}"); canvas.restoreState()
+        SimpleDocTemplate(buffer,pagesize=A4,rightMargin=18*mm,leftMargin=18*mm,topMargin=16*mm,bottomMargin=17*mm,title="Focus360Blog SEO Audit Report",author="Focus360Blog").build(story,onFirstPage=footer,onLaterPages=footer)
+        buffer.seek(0)
+        from flask import send_file
+        filename="Focus360Blog_SEO_Audit_Report.pdf"
+        return send_file(buffer,mimetype="application/pdf",as_attachment=True,download_name=filename)
+    except Exception as e:
+        app.logger.exception("PDF report generation failed")
+        return jsonify({"error":"Could not generate PDF report: "+str(e)}),500
+
 
 @app.route("/")
 def home(): return render_template("index.html")
