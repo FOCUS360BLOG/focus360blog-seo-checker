@@ -1,0 +1,155 @@
+<!-- Focus360Blog Free SEO Checker | Blogger Page HTML
+IMPORTANT: Replace API_BASE below with your deployed backend URL (without trailing slash).
+Paste this into Blogger Page > HTML view. -->
+<div id="f360-seo-checker" style="max-width:980px;margin:20px auto;font-family:Arial,sans-serif;color:#172033;line-height:1.5">
+  <style>
+    #f360-seo-checker *{box-sizing:border-box}
+    #f360-seo-checker .hero{background:linear-gradient(135deg,#102a43,#176b87);color:#fff;padding:28px 22px;border-radius:16px;text-align:center}
+    #f360-seo-checker h2{margin:0 0 8px;font-size:28px;color:inherit}
+    #f360-seo-checker .muted{color:#64748b;font-size:14px}
+    #f360-seo-checker .hero .muted{color:#d8eaf2}
+    #f360-seo-checker .inputrow{display:flex;gap:10px;margin:22px 0 10px}
+    #f360-seo-checker input{flex:1;min-width:0;padding:14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
+    #f360-seo-checker button{border:0;border-radius:10px;padding:13px 20px;font-weight:700;cursor:pointer;background:#0ea5e9;color:white}
+    #f360-seo-checker button:disabled{opacity:.55;cursor:wait}
+    #f360-seo-checker .notice{padding:12px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:13px;margin:12px 0}
+    #f360-seo-checker .error{display:none;padding:12px;background:#fef2f2;color:#991b1b;border-radius:10px;margin:12px 0}
+    #f360-seo-checker .results{display:none;margin-top:22px}
+    #f360-seo-checker .topgrid{display:grid;grid-template-columns:230px 1fr;gap:16px}
+    #f360-seo-checker .panel{border:1px solid #e2e8f0;border-radius:14px;padding:18px;background:#fff}
+    #f360-seo-checker .scorebox{text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center}
+    #f360-seo-checker .score{font-size:54px;font-weight:800;line-height:1.1;color:#0f766e}
+    #f360-seo-checker .status{font-weight:700;margin-top:8px}
+    #f360-seo-checker .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    #f360-seo-checker .stat{background:#f8fafc;padding:10px 14px;border-radius:9px;font-size:13px}
+    #f360-seo-checker .stat b{font-size:18px;display:block}
+    #f360-seo-checker h3{font-size:19px;margin:0 0 12px}
+    #f360-seo-checker .check{display:grid;grid-template-columns:100px 1fr;gap:12px;padding:13px 0;border-bottom:1px solid #edf2f7}
+    #f360-seo-checker .check:last-child{border-bottom:0}
+    #f360-seo-checker .pill{font-size:12px;font-weight:700;text-transform:uppercase;border-radius:20px;padding:5px 8px;height:max-content;text-align:center}
+    #f360-seo-checker .pass{background:#dcfce7;color:#166534}
+    #f360-seo-checker .warning{background:#fef3c7;color:#92400e}
+    #f360-seo-checker .fail{background:#fee2e2;color:#991b1b}
+    #f360-seo-checker .recommend{font-size:13px;color:#64748b;margin-top:4px}
+    #f360-seo-checker .actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+    #f360-seo-checker .secondary{background:#334155}
+    #f360-seo-checker .foot{font-size:12px;color:#64748b;margin-top:16px}
+    @media(max-width:650px){ #f360-seo-checker .inputrow{flex-direction:column}#f360-seo-checker .topgrid{grid-template-columns:1fr}#f360-seo-checker .check{grid-template-columns:82px 1fr}#f360-seo-checker h2{font-size:23px}}
+    @media print{ #f360-seo-checker .hero,#f360-seo-checker .inputrow,#f360-seo-checker .notice,#f360-seo-checker .actions{display:none!important}#f360-seo-checker .results{display:block!important}}
+
+  </style>
+
+  <div class="hero">
+    <h2>Free SEO Checker</h2>
+    <div>Analyse your webpage’s technical and on-page SEO</div>
+    <div class="muted">Get an instant diagnostic score with actionable improvement tips.</div>
+  </div>
+
+  <div class="inputrow">
+    <input id="f360-url" type="url" placeholder="https://example.com/your-blog-post" aria-label="Website URL">
+    <button id="f360-analyse">Analyse SEO</button>
+  </div>
+  <div class="muted">Enter a complete public webpage URL, including https://</div>
+  <div class="notice"><b>Note:</b> This is a technical/on-page diagnostic, not Google’s ranking score. Content quality, competition, backlinks and actual search rankings are not measured.</div>
+  <div id="f360-error" class="error" role="alert"></div>
+  <div id="f360-progress" style="display:none;margin:14px 0;padding:16px;border:1px solid #bae6fd;background:#f0f9ff;border-radius:12px;color:#075985">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="f360-spinner" aria-hidden="true" style="width:20px;height:20px;border:3px solid #bae6fd;border-top-color:#0284c7;border-radius:50%;display:inline-block;animation:f360spin .8s linear infinite"></span>
+      <strong id="f360-progress-title">Connecting to SEO Checker…</strong>
+    </div>
+    <div id="f360-progress-detail" style="font-size:13px;margin:8px 0 0 30px">The free service may need about a minute to wake up after inactivity.</div>
+    <div style="height:6px;background:#dbeafe;border-radius:10px;margin:12px 0 0 30px;overflow:hidden"><div id="f360-progress-bar" style="height:100%;width:12%;background:#0284c7;border-radius:10px;transition:width .5s ease"></div></div>
+  </div>
+  <style>@keyframes f360spin{to{transform:rotate(360deg)}}</style>
+
+  <div id="f360-results" class="results">
+    <div class="topgrid">
+      <div class="panel scorebox">
+        <div class="muted">SEO Diagnostic Score</div>
+        <div class="score" id="f360-score">—</div>
+        <div class="status" id="f360-label">—</div>
+        <div class="muted" style="margin-top:8px">out of 100</div>
+      </div>
+      <div class="panel">
+        <h3>Audit Summary</h3>
+        <div id="f360-audited" class="muted" style="overflow-wrap:anywhere"></div>
+        <div class="stats">
+          <div class="stat"><b id="f360-pass">0</b>Passed</div>
+          <div class="stat"><b id="f360-warn">0</b>Warnings</div>
+          <div class="stat"><b id="f360-fail">0</b>Failed</div>
+        </div>
+        <div class="foot">Score bands: 90–100 Excellent · 85–89 Very Good · 70–84 Good · 50–69 Needs Improvement · below 50 Poor</div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h3>SEO Checks & Recommendations</h3>
+      <div id="f360-checklist"></div>
+      <div class="actions">
+        <button class="secondary" id="f360-print" type="button">Print / Save as PDF</button>
+        <button class="secondary" id="f360-again" type="button">Check another URL</button>
+      </div>
+      <div class="foot">Automated checks inspect the HTML returned by the website. JavaScript-rendered content may not be included.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // REQUIRED: Replace with your deployed backend origin, e.g. https://your-seo-service.example
+  // Do not add /api/audit here. The page appends that route.
+  var API_BASE = "https://YOUR-BACKEND-DOMAIN-HERE";
+  var root=document.getElementById("f360-seo-checker");
+  if(!root)return;
+  var input=root.querySelector("#f360-url"), btn=root.querySelector("#f360-analyse");
+  var error=root.querySelector("#f360-error"), results=root.querySelector("#f360-results");
+  var list=root.querySelector("#f360-checklist");
+  function showError(msg){error.textContent=msg;error.style.display="block";}
+  function hideError(){error.textContent="";error.style.display="none";}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+  function scoreLabel(n){if(n>=90)return "Excellent technical SEO";if(n>=85)return "Very good technical SEO";if(n>=70)return "Good — improvements recommended";if(n>=50)return "Needs improvement";return "Poor — review issues";}
+  function setProgress(title,detail,width){
+    root.querySelector("#f360-progress-title").textContent=title;
+    root.querySelector("#f360-progress-detail").textContent=detail;
+    root.querySelector("#f360-progress-bar").style.width=width+"%";
+  }
+  function runAudit(){
+    hideError(); results.style.display="none";
+    var progress=root.querySelector("#f360-progress");
+    progress.style.display="none";
+    var url=input.value.trim();
+    if(!url){showError("Please enter a webpage URL.");input.focus();return;}
+    try{var parsed=new URL(url);if(!/^https?:$/.test(parsed.protocol)){throw new Error();}}
+    catch(e){showError("Enter a valid full URL beginning with http:// or https://.");return;}
+    if(API_BASE.indexOf("YOUR-BACKEND-DOMAIN-HERE")!==-1){showError("The SEO checker backend has not been connected yet. The site owner must set API_BASE in this page’s HTML after hosting the backend.");return;}
+    btn.disabled=true;btn.textContent="Analysing…";progress.style.display="block";
+    setProgress("Connecting to SEO Checker…","If the free service has been inactive, it may take about a minute to wake up.",12);
+    var phase2=setTimeout(function(){setProgress("Waking up the free service…","Please keep this page open. The first request after inactivity can be slower.",35);},7000);
+    var phase3=setTimeout(function(){setProgress("Fetching your webpage…","The SEO Checker is now requesting the page you entered.",58);},25000);
+    var phase4=setTimeout(function(){setProgress("Analysing SEO…","Checking page title, headings, metadata, links and other technical signals.",78);},45000);
+    fetch(API_BASE.replace(/\/$/,"")+"/api/audit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:url})})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||"Audit request failed.");return d;});})
+    .then(function(data){
+      setProgress("Preparing your report…","SEO analysis completed successfully.",100);
+      root.querySelector("#f360-score").textContent=data.score;
+      root.querySelector("#f360-label").textContent=scoreLabel(data.score);
+      root.querySelector("#f360-audited").textContent="Requested: "+data.url+" | Final URL: "+data.finalUrl;
+      root.querySelector("#f360-pass").textContent=data.summary.pass;
+      root.querySelector("#f360-warn").textContent=data.summary.warning;
+      root.querySelector("#f360-fail").textContent=data.summary.fail;
+      list.innerHTML=(data.checks||[]).map(function(c){
+        var status=(c.status||"warning").toLowerCase();
+        return '<div class="check"><span class="pill '+esc(status)+'">'+esc(status)+'</span><div><b>'+esc(c.name)+'</b><div class="muted">'+esc(c.detail)+'</div>'+(c.recommendation?'<div class="recommend">Tip: '+esc(c.recommendation)+'</div>':'')+'</div></div>';
+      }).join("");
+      results.style.display="block";
+      progress.style.display="none";
+      results.scrollIntoView({behavior:"smooth",block:"start"});
+    })
+    .catch(function(e){progress.style.display="none";showError((e.message||"Could not connect to the SEO service.")+" Check the backend URL, CORS settings and server status. If the service was waking up, you may try again.");})
+    .finally(function(){clearTimeout(phase2);clearTimeout(phase3);clearTimeout(phase4);btn.disabled=false;btn.textContent="Analyse SEO";});
+  }
+  btn.addEventListener("click",runAudit);
+  input.addEventListener("keydown",function(e){if(e.key==="Enter")runAudit();});
+  root.querySelector("#f360-print").addEventListener("click",function(){window.print();});
+  root.querySelector("#f360-again").addEventListener("click",function(){results.style.display="none";input.value="";input.focus();});
+})();
+</script>
